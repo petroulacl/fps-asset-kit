@@ -154,4 +154,110 @@ python3 download_hdris.py      # Re-download 4 HDR environment maps
 
 ---
 
+---
+
+## 🤖 For AI Coding Agents
+
+This section is a **system prompt** for LLM coding agents (Claude, ChatGPT, Gemini, Copilot, etc.) tasked with building a playable FPS prototype from this repository.
+
+### Your Context
+
+You are building a first-person shooter game using the assets in this repo. All assets are CC0 — no licensing concerns. The working directory is the repo root (`fps-asset-kit/`). You have ~1.1 GB of ready-to-use art.
+
+### Recommended Stack
+
+- **Runtime:** Node.js + Vite (fast dev server, no build config needed)
+- **Engine:** Three.js (via npm: `three`, `@three-ts/gltf-loader`)
+- **Physics:** `cannon-es` (lightweight, pairs with Three.js)
+- **Audio:** Web Audio API (via Three.js `AudioListener` / `PositionalAudio`)
+- **Input:** Pointer Lock API for mouse look + WASD/keyboard events
+
+### Asset Loading Patterns
+
+```js
+// --- TEXTURES (PBR metallic-roughness workflow) ---
+// Path: textures/<MaterialName>/<MaterialName>_2K-JPG_*.jpg
+import { TextureLoader } from 'three';
+const loader = new TextureLoader();
+const colorMap = loader.load('textures/Concrete048/Concrete048_2K-JPG_Color.jpg');
+const normalMap = loader.load('textures/Concrete048/Concrete048_2K-JPG_NormalGL.jpg');
+const roughnessMap = loader.load('textures/Concrete048/Concrete048_2K-JPG_Roughness.jpg');
+const aoMap = loader.load('textures/Concrete048/Concrete048_2K-JPG_AmbientOcclusion.jpg');
+
+// Apply to material
+const material = new THREE.MeshStandardMaterial({
+  map: colorMap,
+  normalMap: normalMap,
+  roughnessMap: roughnessMap,
+  aoMap: aoMap,
+});
+```
+
+```js
+// --- WEAPONS (GLB format — rigged FBX also available) ---
+// Path: weapons/flat_guns_<west|east>/GLB/<WeaponType>_<West|East>.glb
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+const gltfLoader = new GLTFLoader();
+gltfLoader.load('weapons/flat_guns_west/GLB/Rifle_Assault_West.glb', (gltf) => {
+  const weapon = gltf.scene;
+  weapon.position.set(0.3, -0.25, -0.5); // First-person camera-relative
+  camera.add(weapon);                     // Attach to camera
+});
+```
+
+```js
+// --- SFX (WAV / FLAC) ---
+// Path: sfx/<category>/<folder>/<file>.wav
+import { AudioListener, Audio, AudioLoader } from 'three';
+const listener = new AudioListener();
+camera.add(listener);
+const audioLoader = new AudioLoader();
+audioLoader.load('sfx/gunshots/game_gunshot.wav', (buffer) => {
+  const sound = new Audio(listener);
+  sound.setBuffer(buffer);
+  sound.play();
+});
+```
+
+```js
+// --- HDRIs (environment lighting) ---
+// Path: hdris/<name>.hdr
+import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
+const rgbeLoader = new RGBELoader();
+rgbeLoader.load('hdris/rural_landscape_2k.hdr', (texture) => {
+  texture.mapping = THREE.EquirectangularReflectionMapping;
+  scene.environment = texture;
+  scene.background = texture;
+});
+```
+
+### Game Architecture (Suggested)
+
+```
+src/
+├── main.js            # Entry: scene, camera, renderer, game loop
+├── player.js          # First-person controller (pointer lock + WASD)
+├── world.js           # Level geometry from textures/materials
+├── weapons.js         # Weapon switching, firing, animation
+├── audio.js           # SFX manager, positional audio
+├── hud.js             # Crosshair, ammo, health (DOM overlay)
+└── physics.js         # Cannon-es world, collision detection
+```
+
+### Iteration Tips for AI
+
+1. **Start minimal:** Get a walking cube in a textured box room before adding weapons.
+2. **One weapon first:** Implement `Rifle_Assault_West.glb` end-to-end (load → attach → fire animation → sound) before adding others.
+3. **HDRIs for lighting:** Use the HDR environment maps for realistic reflections/shadows without building a lightmap pipeline.
+4. **FBX rigs available:** The FBX files in each weapon folder contain a bone rig if you need animated hands/arms. GLB format is simpler for static weapon models.
+5. **Test audio early:** Weapon SFX files are field recordings — test at different gain levels and add reverb for distance.
+
+### Constraints
+
+- No `git-lfs` available — all assets are stored as regular blobs.
+- No external API calls or network requests for assets (everything is local).
+- Keep the first build under 500 lines of JavaScript for prototyping speed.
+
+---
+
 *Curated by Hermes Agent. Built from CC0 sources so you can focus on making games, not clearing rights.*
