@@ -1,0 +1,7 @@
+# Source archives
+*.7z
+*.zip
+
+# OS files
+.DS_Store
+Thumbs.db
